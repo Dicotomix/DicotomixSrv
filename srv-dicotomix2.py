@@ -8,6 +8,11 @@ import unidecode
 from interval import *
 
 class dicotomix:
+
+    # words_x contains the position that ends
+    # a word interval.
+    # words_s stores the corresponding word in the
+    # same order
     def __init__(self):
         self.curr = interval(0.0,1.0)
         self.s = 0
@@ -18,25 +23,10 @@ class dicotomix:
     def restart(self):
         self.curr = interval(0.0,1.0)
 
-    def init_words(self,dict_name,freq=True):
-        f = open(dict_name,"r")
-        l = f.read()
-        l = list(filter(lambda x: x != '', l.split("\n")))
-        dico = []
-        for a in l:
-            ll = list(filter(lambda x: x!='',a.split(" ")))
-            dico.append((ll[1].replace(" ", ""),int(ll[0])))
-        collator = PyICU.Collator.createInstance(PyICU.Locale('pl_PL.UTF-8'))
-        dico.sort(key=lambda x: collator.getSortKey(x[0]))
-        s = 0
-        self.words_x.append(0.0)
-        for d in dico:
-            self.words_s.append(d[0])
-            s += d[1]
-            self.words_x.append(s)
-        self.words_x = list(map(lambda x: float(x)/float(s),self.words_x))
-
-    def init_words2(self,dict_name,freq=True):
+    # Load the dictionary with frequencies when structured
+    # as in lexique_complet.csv
+    # It's a bit hard coded, sorry for that
+    def load_dict(self,dict_name,freq=True):
         f = open(dict_name,"r")
         l = f.read()
         l = list(filter(lambda x: x != '', l.split("\n")))
@@ -50,28 +40,6 @@ class dicotomix:
                 dico[word] = freq
             else:
                 dico[word] = max(dico[word],freq)
-        classe_eq = {}
-        for w in dico:
-            word_without_accent = unidecode.unidecode(w)
-            if word_without_accent == "cote" or word_without_accent == "age":
-                print(w)
-            if word_without_accent in dico and word_without_accent != w:
-                #print(w,word_without_accent)
-                if not word_without_accent in classe_eq:
-                    classe_eq[word_without_accent] = 1
-                classe_eq[word_without_accent] += 1
-        print()
-        print()
-        for w in classe_eq:
-            if classe_eq[w] == 3:
-                print(w)
-        print()
-        print()
-
-        for w in classe_eq:
-            if classe_eq[w] == 4:
-                print(w)
-        print(max(classe_eq.values()))
 
         dicobis = []
         for w in dico:
@@ -102,17 +70,22 @@ class dicotomix:
         #self.restart()
         #self.words_x = list(map(lambda x: float(x)/float(s),self.words_x))
 
+    # Used in order to efficiently find which word corresponds to 
+    # the current search interval
     def find_le(self,x):
         i = bisect.bisect_right(self.words_x, x)
         if i:
             return i-1,self.words_x[i-1]
         raise ValueError
 
+    # Gives the word corresponding to the current
+    # search interval: the closest word to the mid abcisse
     def get_word(self):
         mid = self.curr.mid()
         i_word = self.find_le(mid)[0]
         return self.words_s[i_word]
 
+    # Gives the words corresponding to the interval bound
     def get_words_bound(self):
         i_word_beg = self.find_le(self.curr.beg)[0]
         i_word_end = self.find_le(self.curr.end)[0]
@@ -120,9 +93,11 @@ class dicotomix:
             i_word_end = -1
         return self.words_s[i_word_beg],self.words_s[i_word_end]
 
+    # Remove accents from a string
     def without_accent(self,w):
         return unidecode.unidecode(w)
 
+    # Give the common prefix of bounds without accent
     def bound_prefix(self):
         w_beg,w_end = self.get_words_bound()
         w_beg = self.without_accent(w_beg)
@@ -142,12 +117,14 @@ class dicotomix:
         return i_word_end == i_word_beg
 
 
+    # Does the left operation
     def left(self):
         mid = self.curr.mid()
         x_word = self.find_le(mid)[1]
         self.curr = self.curr.left(x_word)
         return self.is_finished()
 
+    # Does the right operation
     def right(self):
         mid = self.curr.mid()
         i_word = self.find_le(mid)[0]
@@ -155,6 +132,8 @@ class dicotomix:
         self.curr = self.curr.right(x_word)
         return self.is_finished()
 
+    # Test the method on a given word
+    # it gives back the number of steps
     def find_word(self,w):
         #print(self.curr)
         #print(self.get_word())
@@ -179,6 +158,9 @@ class dicotomix:
         res = self.find_word(w)
         return (res[0],1+res[1])
 
+    # It tests the method over the dictionary
+    # gives back the mean number of trials
+    # TODO: problem with finding the last word ([:-1] l.167)
     def test_yourself(self):
         m = 0
         self.restart()
@@ -193,9 +175,12 @@ class dicotomix:
         return float(m)/len(self.words_s)
 
 myd = dicotomix()
-myd.init_words2("LexiqueComplet.csv",True)
+myd.load_dict("LexiqueComplet.csv",True)
 #myd.test_yourself()
 #exit(1)
+
+
+# Communication routine
 def send(conn,w,prefix):
     print("Sent data: "+w+", "+str(prefix))
     print(myd.get_words_bound())
