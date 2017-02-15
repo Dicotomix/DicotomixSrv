@@ -13,15 +13,17 @@ class dicotomix:
     # a word interval.
     # words_s stores the corresponding word in the
     # same order
+    # In order to discard we maintain a stack of all seen states
+    # the current state in self.curr[-1]
     def __init__(self):
-        self.curr = interval(0.0,1.0)
+        self.curr = [interval(0.0,1.0)]
         self.s = 0
         self.words_x = []
         self.words_s = []
         #self.init_words2(dict_name,freq)
 
     def restart(self):
-        self.curr = interval(0.0,1.0)
+        self.curr = [interval(0.0,1.0)]
 
     # Load the dictionary with frequencies when structured
     # as in lexique_complet.csv
@@ -81,14 +83,14 @@ class dicotomix:
     # Gives the word corresponding to the current
     # search interval: the closest word to the mid abcisse
     def get_word(self):
-        mid = self.curr.mid()
+        mid = self.curr[-1].mid()
         i_word = self.find_le(mid)[0]
         return self.words_s[i_word]
 
     # Gives the words corresponding to the interval bound
     def get_words_bound(self):
-        i_word_beg = self.find_le(self.curr.beg)[0]
-        i_word_end = self.find_le(self.curr.end)[0]
+        i_word_beg = self.find_le(self.curr[-1].beg)[0]
+        i_word_end = self.find_le(self.curr[-1].end)[0]
         if i_word_end >= len(self.words_s):
             i_word_end = -1
         return self.words_s[i_word_beg],self.words_s[i_word_end]
@@ -112,25 +114,30 @@ class dicotomix:
     #If our seeking interval is included
     #in a word interval it's over, we wont find it :(
     def is_finished(self):
-        i_word_beg = self.find_le(self.curr.beg)[0]
-        i_word_end = self.find_le(self.curr.end)[0]
+        i_word_beg = self.find_le(self.curr[-1].beg)[0]
+        i_word_end = self.find_le(self.curr[-1].end)[0]
         return i_word_end == i_word_beg
 
 
     # Does the left operation
     def left(self):
-        mid = self.curr.mid()
+        mid = self.curr[-1].mid()
         x_word = self.find_le(mid)[1]
-        self.curr = self.curr.left(x_word)
+        self.curr.append(self.curr[-1].left(x_word))
         return self.is_finished()
 
     # Does the right operation
     def right(self):
-        mid = self.curr.mid()
+        mid = self.curr[-1].mid()
         i_word = self.find_le(mid)[0]
         x_word = self.words_x[i_word+1]
-        self.curr = self.curr.right(x_word)
+        self.curr.append(self.curr[-1].right(x_word))
         return self.is_finished()
+
+    # Does the discard operation, remove current state
+    def discard(self):
+        if len(self.curr) > 1:
+            self.curr = self.curr[:-1]
 
     # Test the method on a given word
     # it gives back the number of steps
@@ -218,6 +225,10 @@ while 1:
 
     if cmd[0] == 3:
         myd.right()
+        send(conn,myd.get_word(),myd.bound_prefix())
+
+    if cmd[0] == 4:
+        myd.discard()
         send(conn,myd.get_word(),myd.bound_prefix())
 
 conn.close()
