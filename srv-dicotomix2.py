@@ -26,45 +26,47 @@ class dicotomix:
     # Load the dictionary with frequencies when structured
     # as in lexique_complet.csv
     # It's a bit hard coded, sorry for that
-    def load_dict(self,dict_name,freq=True):
-        f = open(dict_name,"r")
-        l = f.read()
-        l = list(filter(lambda x: x != '', l.split("\n")))
-        dico = {}
-        for a in l:
-            ll = list(filter(lambda x: x!='',a.split(";")))
+    def loadDictionary(self,dict_name,freq=True):
+        file = open(dict_name,"r")
+        lines = file.read()
+        lines = list(filter(lambda x: x != '', lines.split("\n")))
+        frequencies = {}
+        for line in lines:
+            parameters = list(filter(lambda x: x!='', line.split(";")))
 
-            word = ll[1]
-            freq = max(map(np.float128,ll[3:-1]))
-            if not word in dico:
-                dico[word] = freq
+            word = parameters[1]
+            freq = max(map(np.float128, parameters[3:-1]))
+            if not word in frequencies:
+                frequencies[word] = freq
             else:
-                dico[word] = max(dico[word],freq)
+                frequencies[word] = max(frequencies[word], freq)
 
-        dicobis = []
-        for w in dico:
-            dicobis.append((w,dico[w]))
-        dico = dicobis[:]
+        frequenciesbis = []
+        for w in frequencies:
+            frequenciesbis.append((w, frequencies[w]))
+        frequencies = frequenciesbis[:]
         collator = PyICU.Collator.createInstance(PyICU.Locale('pl_PL.UTF-8'))
-        dico.sort(key=lambda x: collator.getSortKey(x[0]))
+        frequencies.sort(key=lambda x: collator.getSortKey(x[0]))
 
         if not freq:
             s = 0.0
-            delta = float(1/float(len(dico)))
+            delta = float(1/float(len(frequencies)))
             self.wordsAbs.append(0.0)
-            for d in dico:
+            for d in frequencies:
                 self.wordsSpell.append(d[0])
                 s += delta
                 self.wordsAbs.append(self.s)
         else:
             s = np.float128(0.0)
             self.wordsAbs.append(0.0)
-            for d in dico:
+            for d in frequencies:
                 self.wordsSpell.append(d[0])
                 s += np.float128(d[1])
                 self.wordsAbs.append(s)
             self.wordsAbs = np.array(self.wordsAbs)/s
             print(self.wordsAbs)
+
+        file.close()
 
         #print(self.wordsAbs)
         #self.restart()
@@ -86,7 +88,7 @@ class dicotomix:
         return self.wordsSpell[i]
 
     # Gives the words corresponding to the interval bound
-    def getWords_bound(self):
+    def getWordsBound(self):
         i_word_beg = self.findIndex(self.curr[-1].beg)
         i_word_end = self.findIndex(self.curr[-1].end)
         if i_word_end >= len(self.wordsSpell):
@@ -98,8 +100,8 @@ class dicotomix:
         return unidecode.unidecode(word)
 
     # Give the common prefix of bounds without accent
-    def bound_prefix(self):
-        w_beg,w_end = self.getWords_bound()
+    def boundPrefix(self):
+        w_beg,w_end = self.getWordsBound()
         w_beg = self.removeAccents(w_beg)
         w_end = self.removeAccents(w_end)
         k = 0
@@ -120,7 +122,7 @@ class dicotomix:
     # Does the left operation
     def left(self):
         mid = self.curr[-1].mid()
-        leftIndex = self.findIndex(mid)
+        leftIndex = self.findIndex(mid) - 1
         leftAbs = self.wordsAbs[leftIndex]
         self.curr.append(self.curr[-1].left(leftAbs))
         return self.isFinished()
@@ -180,7 +182,7 @@ class dicotomix:
         return float(m)/len(self.wordsSpell)
 
 myd = dicotomix()
-myd.load_dict("LexiqueComplet.csv",True)
+myd.loadDictionary("LexiqueComplet.csv",True)
 #myd.testAll()
 #exit(1)
 
@@ -188,7 +190,7 @@ myd.load_dict("LexiqueComplet.csv",True)
 # Communication routine
 def send(conn, w, prefix):
     print("Sent data: "+w+", "+str(prefix))
-    print(myd.getWords_bound())
+    print(myd.getWordsBound())
 
     #conn.send(bytes(dico[beg]+","+dico[get_mid()]+","+dico[end-1], 'utf-8'))
     word = w.encode('utf-16be')
@@ -215,18 +217,13 @@ while 1:
 
     if cmd[0] == 1:
         myd.restart()
-        send(conn,myd.getWord(),myd.bound_prefix())
-
     if cmd[0] == 2:
         myd.left()
-        send(conn,myd.getWord(),myd.bound_prefix())
-
     if cmd[0] == 3:
         myd.right()
-        send(conn,myd.getWord(),myd.bound_prefix())
-
     if cmd[0] == 4:
         myd.discard()
-        send(conn,myd.getWord(),myd.bound_prefix())
+    
+    send(conn,myd.getWord(),myd.boundPrefix())
 
 conn.close()
