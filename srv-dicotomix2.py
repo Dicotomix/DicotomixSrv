@@ -9,17 +9,15 @@ from interval import *
 
 class dicotomix:
 
-    # words_x contains the position that ends
-    # a word interval.
-    # words_s stores the corresponding word in the
-    # same order
-    # In order to discard we maintain a stack of all seen states
+    # wordsAbs contains the (right) abscissa of words.
+    # wordsSpell stores the spelling of words.
+    # curr is the stack of visited intervals
     # the current state in self.curr[-1]
     def __init__(self):
         self.curr = [interval(0.0,1.0)]
         self.s = 0
-        self.words_x = []
-        self.words_s = []
+        self.wordsAbs = []
+        self.wordsSpell = []
         #self.init_words2(dict_name,freq)
 
     def restart(self):
@@ -53,57 +51,57 @@ class dicotomix:
         if not freq:
             s = 0.0
             delta = float(1/float(len(dico)))
-            self.words_x.append(0.0)
+            self.wordsAbs.append(0.0)
             for d in dico:
-                self.words_s.append(d[0])
+                self.wordsSpell.append(d[0])
                 s += delta
-                self.words_x.append(self.s)
+                self.wordsAbs.append(self.s)
         else:
             s = np.float128(0.0)
-            self.words_x.append(0.0)
+            self.wordsAbs.append(0.0)
             for d in dico:
-                self.words_s.append(d[0])
+                self.wordsSpell.append(d[0])
                 s += np.float128(d[1])
-                self.words_x.append(s)
-            self.words_x = np.array(self.words_x)/s
-            print(self.words_x)
+                self.wordsAbs.append(s)
+            self.wordsAbs = np.array(self.wordsAbs)/s
+            print(self.wordsAbs)
 
-        #print(self.words_x)
+        #print(self.wordsAbs)
         #self.restart()
-        #self.words_x = list(map(lambda x: float(x)/float(s),self.words_x))
+        #self.wordsAbs = list(map(lambda x: float(x)/float(s),self.wordsAbs))
 
     # Used in order to efficiently find which word corresponds to 
     # the current search interval
-    def find_le(self,x):
-        i = bisect.bisect_right(self.words_x, x)
-        if i:
-            return i-1,self.words_x[i-1]
-        raise ValueError
+    def findIndex(self, cursor):
+        i = bisect.bisect_right(self.wordsAbs, cursor)
+        if i < 0:
+            raise ValueError
+        return i-1
 
     # Gives the word corresponding to the current
     # search interval: the closest word to the mid abcisse
-    def get_word(self):
+    def getWord(self):
         mid = self.curr[-1].mid()
-        i_word = self.find_le(mid)[0]
-        return self.words_s[i_word]
+        i = self.findIndex(mid)
+        return self.wordsSpell[i]
 
     # Gives the words corresponding to the interval bound
-    def get_words_bound(self):
-        i_word_beg = self.find_le(self.curr[-1].beg)[0]
-        i_word_end = self.find_le(self.curr[-1].end)[0]
-        if i_word_end >= len(self.words_s):
+    def getWords_bound(self):
+        i_word_beg = self.findIndex(self.curr[-1].beg)
+        i_word_end = self.findIndex(self.curr[-1].end)
+        if i_word_end >= len(self.wordsSpell):
             i_word_end = -1
-        return self.words_s[i_word_beg],self.words_s[i_word_end]
+        return self.wordsSpell[i_word_beg],self.wordsSpell[i_word_end]
 
     # Remove accents from a string
-    def without_accent(self,w):
-        return unidecode.unidecode(w)
+    def removeAccents(self, word):
+        return unidecode.unidecode(word)
 
     # Give the common prefix of bounds without accent
     def bound_prefix(self):
-        w_beg,w_end = self.get_words_bound()
-        w_beg = self.without_accent(w_beg)
-        w_end = self.without_accent(w_end)
+        w_beg,w_end = self.getWords_bound()
+        w_beg = self.removeAccents(w_beg)
+        w_end = self.removeAccents(w_end)
         k = 0
         for i in range(min(len(w_beg),len(w_end))):
             if w_beg[i] != w_end[i]:
@@ -113,26 +111,27 @@ class dicotomix:
 
     #If our seeking interval is included
     #in a word interval it's over, we wont find it :(
-    def is_finished(self):
-        i_word_beg = self.find_le(self.curr[-1].beg)[0]
-        i_word_end = self.find_le(self.curr[-1].end)[0]
+    def isFinished(self):
+        i_word_beg = self.findIndex(self.curr[-1].beg)
+        i_word_end = self.findIndex(self.curr[-1].end)
         return i_word_end == i_word_beg
 
 
     # Does the left operation
     def left(self):
         mid = self.curr[-1].mid()
-        x_word = self.find_le(mid)[1]
-        self.curr.append(self.curr[-1].left(x_word))
-        return self.is_finished()
+        leftIndex = self.findIndex(mid)
+        leftAbs = self.wordsAbs[leftIndex]
+        self.curr.append(self.curr[-1].left(leftAbs))
+        return self.isFinished()
 
     # Does the right operation
     def right(self):
         mid = self.curr[-1].mid()
-        i_word = self.find_le(mid)[0]
-        x_word = self.words_x[i_word+1]
-        self.curr.append(self.curr[-1].right(x_word))
-        return self.is_finished()
+        rightIndex = self.findIndex(mid) + 1
+        rightAbs = self.wordsAbs[rightIndex]
+        self.curr.append(self.curr[-1].right(rightAbs))
+        return self.isFinished()
 
     # Does the discard operation, remove current state
     def discard(self):
@@ -141,15 +140,15 @@ class dicotomix:
 
     # Test the method on a given word
     # it gives back the number of steps
-    def find_word(self,w):
+    def testWord(self, w):
         #print(self.curr)
-        #print(self.get_word())
-        gets = self.get_word()
+        #print(self.getWord())
+        gets = self.getWord()
 
         if gets == w:
             return (True,0)
 
-        if self.is_finished():
+        if self.isFinished():
             return (False,0)
 
         to_cmp = [gets,w]
@@ -162,35 +161,34 @@ class dicotomix:
         else:
             self.right()
 
-        res = self.find_word(w)
+        res = self.testWord(w)
         return (res[0],1+res[1])
 
-    # It tests the method over the dictionary
-    # gives back the mean number of trials
+    # gives back the mean number of trials over the whole dictionary
     # TODO: problem with finding the last word ([:-1] l.167)
-    def test_yourself(self):
+    def testAll(self):
         m = 0
         self.restart()
-        for w in self.words_s[:-1]:
+        for w in self.wordsSpell[:-1]:
             print(w)
-            res = self.find_word(w)
+            res = self.testWord(w)
             self.restart()
             if not res[0]:
                 print("Error occurs with word: "+w)
                 return
             m += res[1]
-        return float(m)/len(self.words_s)
+        return float(m)/len(self.wordsSpell)
 
 myd = dicotomix()
 myd.load_dict("LexiqueComplet.csv",True)
-#myd.test_yourself()
+#myd.testAll()
 #exit(1)
 
 
 # Communication routine
-def send(conn,w,prefix):
+def send(conn, w, prefix):
     print("Sent data: "+w+", "+str(prefix))
-    print(myd.get_words_bound())
+    print(myd.getWords_bound())
 
     #conn.send(bytes(dico[beg]+","+dico[get_mid()]+","+dico[end-1], 'utf-8'))
     word = w.encode('utf-16be')
@@ -198,7 +196,7 @@ def send(conn,w,prefix):
     conn.send(word)
     conn.send(struct.pack(">I", prefix))
 
-#print(myd.find_word("abandonneur"))
+#print(myd.testWord("abandonneur"))
 TCP_IP = '127.0.0.1'
 TCP_PORT = 5005
 BUFFER_SIZE = 1
@@ -217,18 +215,18 @@ while 1:
 
     if cmd[0] == 1:
         myd.restart()
-        send(conn,myd.get_word(),myd.bound_prefix())
+        send(conn,myd.getWord(),myd.bound_prefix())
 
     if cmd[0] == 2:
         myd.left()
-        send(conn,myd.get_word(),myd.bound_prefix())
+        send(conn,myd.getWord(),myd.bound_prefix())
 
     if cmd[0] == 3:
         myd.right()
-        send(conn,myd.get_word(),myd.bound_prefix())
+        send(conn,myd.getWord(),myd.bound_prefix())
 
     if cmd[0] == 4:
         myd.discard()
-        send(conn,myd.get_word(),myd.bound_prefix())
+        send(conn,myd.getWord(),myd.bound_prefix())
 
 conn.close()
