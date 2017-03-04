@@ -236,6 +236,7 @@ while 1:
     print("received data:", cmd[0])
 
     if cmd[0] == 1:
+###     Le mot choisi est : myd.wordsSpell[myd.currentWordIndex[-1]])
         myd.restart()
     if cmd[0] == 2:
         myd.left()
