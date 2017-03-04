@@ -26,11 +26,6 @@ class dicotomix:
         self.epsilon = 1 / 50 # randomized interval length
         #self.init_words2(dict_name,freq)
 
-    def restart(self):
-        self.curr = [interval(0.0,1.0)]
-        self.currentWordIndex = []
-        myd.getWord()
-
     # Load the dictionary with frequencies when structured
     # as in lexique_complet.csv
     # It's a bit hard coded, sorry for that
@@ -74,33 +69,7 @@ class dicotomix:
         #print(self.wordsAbs)
         #self.restart()
         #self.wordsAbs = list(map(lambda x: float(x)/float(cumulativeFreq),self.wordsAbs))
-
-    # Used in order to efficiently find which word corresponds to 
-    # the current search interval
-    def findIndex(self, cursor):
-        i = bisect.bisect_right(self.wordsAbs, cursor)
-        if i < 0:
-            raise ValueError
-        return i-1
-
-    # Gives a word corresponding to the current search interval:
-    # a word close to the mid abcisse to wich is added a small random bias
-    def getWord(self):
-        mid = self.curr[-1].mid()
-        intervalLength = self.curr[-1].end - self.curr[-1].beg
-        randomization = random.uniform(-1, 1) * self.epsilon
-        cursor = mid + intervalLength * randomization
-        self.currentWordIndex.append(self.findIndex(cursor))
-        return self.wordsSpell[self.currentWordIndex[-1]] # Line to remove soon
-
-    # Gives the words corresponding to the interval bound
-    def getWordsBound(self):
-        i_word_beg = self.findIndex(self.curr[-1].beg)
-        i_word_end = self.findIndex(self.curr[-1].end)
-        if i_word_end >= len(self.wordsSpell):
-            i_word_end = -1
-        return self.wordsSpell[i_word_beg],self.wordsSpell[i_word_end]
-
+   
     # Remove accents from a string
     def removeAccents(self, word):
         return unidecode.unidecode(word)
@@ -115,6 +84,31 @@ class dicotomix:
             return word[:-1]
         else:
             return word
+
+    # Used in order to efficiently find which word corresponds to 
+    # the current search interval
+    def findIndex(self, cursor):
+        i = bisect.bisect_right(self.wordsAbs, cursor)
+        if i < 0:
+            raise ValueError
+        return i-1
+
+    # Give a word corresponding to the current search interval:
+    # a word close to the mid abcisse to wich is added a small random bias
+    def getWord(self):
+        mid = self.curr[-1].mid()
+        randomization = random.uniform(-1, 1) * self.epsilon
+        cursor = mid + self.curr[-1].length() * randomization
+        self.currentWordIndex.append(self.findIndex(cursor))
+        return self.wordsSpell[self.currentWordIndex[-1]] # Line to remove soon
+
+    # Give the words corresponding to the interval bound
+    def getWordsBound(self):
+        i_word_beg = self.findIndex(self.curr[-1].beg)
+        i_word_end = self.findIndex(self.curr[-1].end)
+        if i_word_end >= len(self.wordsSpell):
+            i_word_end = -1
+        return self.wordsSpell[i_word_beg], self.wordsSpell[i_word_end]
 
     # Give the common prefix of bounds without accent
     def boundPrefix(self):
@@ -135,21 +129,25 @@ class dicotomix:
         i_word_end = self.findIndex(self.curr[-1].end)
         return i_word_end == i_word_beg
 
+    # Compute the interval length of word wrt its index
+    def wordLength(self, index):
+        return self.wordsAbs[index+1] - self.wordsAbs[index]
 
     # Does the left operation
-    def left(self):
+    def goLeft(self):
         midIndex = self.currentWordIndex[-1]
-        leftAbs = self.wordsAbs[midIndex]
-        self.curr.append(self.curr[-1].left(leftAbs))
+        correction = self.wordLength(midIndex) / 100 # to avoid the "Existence" problem
+        leftAbs = self.wordsAbs[midIndex] - correction
+        self.curr.append(self.curr[-1].leftPart(leftAbs))
         myd.getWord()
         return self.isFinished()
 
     # Does the right operation
-    def right(self):
-        midIndex = self.currentWordIndex[-1]
-        rightIndex = midIndex + 1
-        rightAbs = self.wordsAbs[rightIndex]
-        self.curr.append(self.curr[-1].right(rightAbs))
+    def goRight(self):
+        rightIndex = self.currentWordIndex[-1] + 1
+        correction = self.wordLength(rightIndex) / 100 # to avoid the "Existence" problem
+        rightAbs = self.wordsAbs[rightIndex] + correction
+        self.curr.append(self.curr[-1].rightPart(rightAbs))
         myd.getWord()
         return self.isFinished()
 
@@ -158,6 +156,12 @@ class dicotomix:
         if len(self.curr) > 1:
             self.curr = self.curr[:-1]
             self.currentWordIndex = self.currentWordIndex[:-1]
+
+    # renitialize the word research
+    def restart(self):
+        self.curr = [interval(0.0,1.0)]
+        self.currentWordIndex = []
+        myd.getWord()
 
     # Test the method on a given word
     # it gives back the number of steps
@@ -178,9 +182,9 @@ class dicotomix:
         to_cmp.sort(key=collator.getSortKey)
 
         if w == to_cmp[0]:
-            self.left()
+            self.goLeft()
         else:
-            self.right()
+            self.goRight()
 
         res = self.testWord(w)
         return (res[0],1+res[1])
@@ -199,6 +203,8 @@ class dicotomix:
                 return
             m += res[1]
         return float(m)/len(self.wordsSpell)
+
+
 
 myd = dicotomix()
 myd.loadDictionary("LexiqueCompletNormalise.csv")
@@ -238,12 +244,12 @@ while 1:
     if cmd[0] == 1:
         myd.restart()
     if cmd[0] == 2:
-        myd.left()
+        myd.goLeft()
     if cmd[0] == 3:
-        myd.right()
+        myd.goRight()
     if cmd[0] == 4:
         myd.discard()
     
-    send(conn,myd.wordsSpell[myd.currentWordIndex[-1]],myd.boundPrefix())
+    send(conn,myd.wordsSpell[myd.currentWordIndex[-1]], myd.boundPrefix())
 
 conn.close()
