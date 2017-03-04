@@ -28,20 +28,20 @@ class dicotomix:
     # Load the dictionary with frequencies when structured
     # as in lexique_complet.csv
     # It's a bit hard coded, sorry for that
-    def loadDictionary(self,dict_name,freq=True):
+    def loadDictionary(self,dict_name):
         file = open(dict_name,"r")
         lines = file.read()
         lines = list(filter(lambda x: x != '', lines.split("\n")))
         frequencies = {}
-        for line in lines:
+        for line in lines[1:]:
             parameters = list(filter(lambda x: x!='', line.split(";")))
 
-            word = parameters[1]
-            freq = max(map(np.float128, parameters[3:-1]))
+            word = parameters[0]
+            freq = np.float128(parameters[-1])
             if not word in frequencies:
                 frequencies[word] = freq
             else:
-                frequencies[word] = max(frequencies[word], freq)
+                frequencies[word] += freq
 
         frequenciesbis = []
         for w in frequencies:
@@ -50,23 +50,14 @@ class dicotomix:
         collator = PyICU.Collator.createInstance(PyICU.Locale('pl_PL.UTF-8'))
         frequencies.sort(key=lambda x: collator.getSortKey(x[0]))
 
-        if not freq:
-            s = 0.0
-            delta = float(1/float(len(frequencies)))
-            self.wordsAbs.append(0.0)
-            for d in frequencies:
-                self.wordsSpell.append(d[0])
-                s += delta
-                self.wordsAbs.append(self.s)
-        else:
-            s = np.float128(0.0)
-            self.wordsAbs.append(0.0)
-            for d in frequencies:
-                self.wordsSpell.append(d[0])
-                s += np.float128(d[1])
-                self.wordsAbs.append(s)
-            self.wordsAbs = np.array(self.wordsAbs)/s
-            print(self.wordsAbs)
+        s = np.float128(0.0)
+        self.wordsAbs.append(0.0)
+        for d in frequencies:
+            self.wordsSpell.append(d[0])
+            s += np.float128(d[1])
+            self.wordsAbs.append(s)
+        self.wordsAbs = np.array(self.wordsAbs)/s
+        print(self.wordsAbs)
 
         file.close()
 
@@ -187,7 +178,7 @@ class dicotomix:
         return float(m)/len(self.wordsSpell)
 
 myd = dicotomix()
-myd.loadDictionary("LexiqueComplet.csv",True)
+myd.loadDictionary("LexiqueCompletNormalise.csv")
 #myd.testAll()
 #exit(1)
 

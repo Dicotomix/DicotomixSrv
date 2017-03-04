@@ -48,4 +48,4 @@ df[which.min(df$word_freq),]
 
 
 #export
-write.table(df, "LexiqueCompletPretraite.csv", row.names = F, quote=F, sep=";")
+write.table(df, "LexiqueCompletNormalise.csv", row.names = F, quote=F, sep=";")
