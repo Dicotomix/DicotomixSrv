@@ -29,7 +29,7 @@ class dicotomix:
     # Load the dictionary with frequencies when structured
     # as in lexique_complet.csv
     # It's a bit hard coded, sorry for that
-    def loadDictionary(self,dict_name):
+    def loadDictionary(self, dict_name):
         file = open(dict_name,"r")
         lines = file.read()
         lines = list(filter(lambda x: x != '', lines.split("\n")))
@@ -49,7 +49,7 @@ class dicotomix:
             dico.append((word, self.removeDash(word), frequencies[word]))
 
         collator = PyICU.Collator.createInstance(PyICU.Locale('fr_FR.UTF-8'))
-        dico.sort(key=lambda x: collator.getSortKey(x[1]))
+        dico.sort(key = lambda x: collator.getSortKey(x[1]))
 
         cumulativeFreq = np.float128(0.0)
         self.wordsAbs.append(0.0)
@@ -102,7 +102,7 @@ class dicotomix:
 
     # Remove dashes and apostrophes from a string
     def removeDash(self, word):
-        return re.sub(r"-|'", r"", word)
+        return re.sub(r"[' .-]+", r"", word)
 
     # Give the common prefix of bounds without accent
     def boundPrefix(self):

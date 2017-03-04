@@ -21,4 +21,4 @@ model = gensim.models.KeyedVectors.load("model.pickle")
 list = []
 list.append(word)
 
-print model.most_similar(positive=list)
+print(model.most_similar(positive=list))
