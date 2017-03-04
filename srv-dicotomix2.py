@@ -78,8 +78,8 @@ class dicotomix:
             raise ValueError
         return i-1
 
-    # Gives the word corresponding to the current
-    # search interval: the closest word to the mid abcisse
+    # Gives a word corresponding to the current search interval:
+    # a word close to the mid abcisse to wich is added a small random bias
     def getWord(self):
         mid = self.curr[-1].mid()
         intervalLength = self.curr[-1].end - self.curr[-1].beg
