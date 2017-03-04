@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import os.path
 import re
 
@@ -49,3 +50,16 @@ class Prediction:
 					result.nbWords += 1
 
 		return result
+	
+	def nextWord(self, word):
+		"""This method returns the word more likely to follow the word "word"."""
+		if word not in self.bigram:
+			return False
+		else:
+			m = 1
+			nextWordResult = ''
+			for word2 in self.bigram[word]:
+				if self.bigram[word][word2] > m:
+					nextWordResult = word2
+
+			return nextWordResult
