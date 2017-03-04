@@ -61,8 +61,9 @@ class Prediction:
 			temp = dict(self.bigram[word])
 			for i in range(nbPredictions):
 				if temp != {}:
-					nextWordResult.append(max(temp, key=temp.get))
-					del(temp[nextWordResult[-1]])
+					nextWord = max(temp, key=temp.get)
+					nextWordResult.append((nextWord,temp[nextWord]))
+					del(temp[nextWord])
 				else:
 					return nextWordResult
 
