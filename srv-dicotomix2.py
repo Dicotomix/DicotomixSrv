@@ -4,6 +4,7 @@ import struct
 import socket
 import numpy as np
 import unidecode
+import random
 
 from interval import *
 
@@ -18,6 +19,7 @@ class dicotomix:
         self.s = 0
         self.wordsAbs = []
         self.wordsSpell = []
+        self.epsilon = 1 / 100 # randomized interval length
         #self.init_words2(dict_name,freq)
 
     def restart(self):
@@ -84,7 +86,10 @@ class dicotomix:
     # search interval: the closest word to the mid abcisse
     def getWord(self):
         mid = self.curr[-1].mid()
-        i = self.findIndex(mid)
+        intervalLength = self.curr[-1].end - self.curr[-1].beg
+        randomization = random.uniform(-1, 1) * self.epsilon
+        cursor = mid + intervalLength * randomization
+        i = self.findIndex(cursor)
         return self.wordsSpell[i]
 
     # Gives the words corresponding to the interval bound
