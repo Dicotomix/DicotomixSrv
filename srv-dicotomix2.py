@@ -37,7 +37,7 @@ class dicotomix:
         for line in lines[1:]:
             parameters = list(filter(lambda x: x!='', line.split(";")))
 
-            word = parameters[0]
+            word = self.removeApostropheEnd(parameters[0])
             freq = np.float128(parameters[-1])
             if not word in frequencies:
                 frequencies[word] = freq
@@ -103,6 +103,13 @@ class dicotomix:
     # Remove dashes and apostrophes from a string
     def removeDash(self, word):
         return re.sub(r"-|'", r"", word)
+
+    # Remove apostrophes at the end of a word
+    def removeApostropheEnd(self, word):
+        if word[-1] == "'":
+            return word[:-1]
+        else:
+            return word
 
     # Give the common prefix of bounds without accent
     def boundPrefix(self):
