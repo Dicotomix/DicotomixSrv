@@ -51,15 +51,19 @@ class Prediction:
 
 		return result
 	
-	def nextWord(self, word):
-		"""This method returns the word more likely to follow the word "word"."""
-		if word not in self.bigram:
+	def nextWords(self, word, nbPredictions=1):
+		"""This method returns the words more likely to follow the word "word"."""
+		if word not in self.bigram or nbPredictions == 0:
 			return False
 		else:
 			m = 1
-			nextWordResult = ''
-			for word2 in self.bigram[word]:
-				if self.bigram[word][word2] > m:
-					nextWordResult = word2
+			nextWordResult = []
+			temp = dict(self.bigram[word])
+			for i in range(nbPredictions):
+				if temp != {}:
+					nextWordResult.append(max(temp, key=temp.get))
+					del(temp[nextWordResult[-1]])
+				else:
+					return nextWordResult
 
 			return nextWordResult
