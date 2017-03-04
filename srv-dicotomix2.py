@@ -15,8 +15,11 @@ class dicotomix:
     # wordsSpell stores the spelling of words.
     # curr is the stack of visited intervals
     # the current state in self.curr[-1]
+    # currentWordIndex is the stack of visited words
+    # the current word is currentWordIndex[-1]
     def __init__(self):
         self.curr = [interval(0.0,1.0)]
+        self.currentWordIndex = []
         self.cumulativeFreq = 0
         self.wordsAbs = []
         self.wordsSpell = []
@@ -25,6 +28,8 @@ class dicotomix:
 
     def restart(self):
         self.curr = [interval(0.0,1.0)]
+        self.currentWordIndex = []
+        myd.getWord()
 
     # Load the dictionary with frequencies when structured
     # as in lexique_complet.csv
@@ -85,8 +90,8 @@ class dicotomix:
         intervalLength = self.curr[-1].end - self.curr[-1].beg
         randomization = random.uniform(-1, 1) * self.epsilon
         cursor = mid + intervalLength * randomization
-        i = self.findIndex(cursor)
-        return self.wordsSpell[i]
+        self.currentWordIndex.append(self.findIndex(cursor))
+        return self.wordsSpell[self.currentWordIndex[-1]] # Line to remove soon
 
     # Gives the words corresponding to the interval bound
     def getWordsBound(self):
@@ -133,24 +138,26 @@ class dicotomix:
 
     # Does the left operation
     def left(self):
-        mid = self.curr[-1].mid()
-        leftIndex = self.findIndex(mid) - 1
-        leftAbs = self.wordsAbs[leftIndex]
+        midIndex = self.currentWordIndex[-1]
+        leftAbs = self.wordsAbs[midIndex]
         self.curr.append(self.curr[-1].left(leftAbs))
+        myd.getWord()
         return self.isFinished()
 
     # Does the right operation
     def right(self):
-        mid = self.curr[-1].mid()
-        rightIndex = self.findIndex(mid) + 1
+        midIndex = self.currentWordIndex[-1]
+        rightIndex = midIndex + 1
         rightAbs = self.wordsAbs[rightIndex]
         self.curr.append(self.curr[-1].right(rightAbs))
+        myd.getWord()
         return self.isFinished()
 
     # Does the discard operation, remove current state
     def discard(self):
         if len(self.curr) > 1:
             self.curr = self.curr[:-1]
+            self.currentWordIndex = self.currentWordIndex[:-1]
 
     # Test the method on a given word
     # it gives back the number of steps
@@ -197,7 +204,7 @@ myd = dicotomix()
 myd.loadDictionary("LexiqueCompletNormalise.csv")
 #myd.testAll()
 #exit(1)
-
+myd.getWord()
 
 # Communication routine
 def send(conn, w, prefix):
@@ -223,6 +230,7 @@ s.listen(1)
 conn, addr = s.accept()
 print('Connection address:', addr)
 while 1:
+    print(len(myd.currentWordIndex))
     cmd = conn.recv(BUFFER_SIZE)
     if not cmd: break
     print("received data:", cmd[0])
@@ -236,6 +244,6 @@ while 1:
     if cmd[0] == 4:
         myd.discard()
     
-    send(conn,myd.getWord(),myd.boundPrefix())
+    send(conn,myd.wordsSpell[myd.currentWordIndex[-1]],myd.boundPrefix())
 
 conn.close()
