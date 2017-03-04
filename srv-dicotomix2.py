@@ -37,7 +37,7 @@ class dicotomix:
         for line in lines[1:]:
             parameters = list(filter(lambda x: x!='', line.split(";")))
 
-            word = parameters[0]
+            word = self.removeApostropheEnd(parameters[0])
             freq = np.float128(parameters[-1])
             if not word in frequencies:
                 frequencies[word] = freq
@@ -78,8 +78,8 @@ class dicotomix:
             raise ValueError
         return i-1
 
-    # Gives the word corresponding to the current
-    # search interval: the closest word to the mid abcisse
+    # Gives a word corresponding to the current search interval:
+    # a word close to the mid abcisse to wich is added a small random bias
     def getWord(self):
         mid = self.curr[-1].mid()
         intervalLength = self.curr[-1].end - self.curr[-1].beg
@@ -103,6 +103,13 @@ class dicotomix:
     # Remove dashes and apostrophes from a string
     def removeDash(self, word):
         return re.sub(r"[' .-]+", r"", word)
+
+    # Remove apostrophes at the end of a word
+    def removeApostropheEnd(self, word):
+        if word[-1] == "'":
+            return word[:-1]
+        else:
+            return word
 
     # Give the common prefix of bounds without accent
     def boundPrefix(self):
