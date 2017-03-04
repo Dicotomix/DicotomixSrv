@@ -5,6 +5,7 @@ import socket
 import numpy as np
 import unidecode
 import random
+import re
 
 from interval import *
 
@@ -16,10 +17,10 @@ class dicotomix:
     # the current state in self.curr[-1]
     def __init__(self):
         self.curr = [interval(0.0,1.0)]
-        self.s = 0
+        self.cumulativeFreq = 0
         self.wordsAbs = []
         self.wordsSpell = []
-        self.epsilon = 1 / 100 # randomized interval length
+        self.epsilon = 1 / 50 # randomized interval length
         #self.init_words2(dict_name,freq)
 
     def restart(self):
@@ -36,34 +37,38 @@ class dicotomix:
         for line in lines[1:]:
             parameters = list(filter(lambda x: x!='', line.split(";")))
 
-            word = parameters[0]
+            word = self.removeApostropheEnd(parameters[0])
             freq = np.float128(parameters[-1])
             if not word in frequencies:
                 frequencies[word] = freq
             else:
                 frequencies[word] += freq
 
-        frequenciesbis = []
-        for w in frequencies:
-            frequenciesbis.append((w, frequencies[w]))
-        frequencies = frequenciesbis[:]
-        collator = PyICU.Collator.createInstance(PyICU.Locale('pl_PL.UTF-8'))
-        frequencies.sort(key=lambda x: collator.getSortKey(x[0]))
+        dico = []
+        for word in frequencies:
+            dico.append((word, self.removeDash(word), frequencies[word]))
 
-        s = np.float128(0.0)
+        collator = PyICU.Collator.createInstance(PyICU.Locale('fr_FR.UTF-8'))
+        dico.sort(key=lambda x: collator.getSortKey(x[1]))
+
+        cumulativeFreq = np.float128(0.0)
         self.wordsAbs.append(0.0)
-        for d in frequencies:
-            self.wordsSpell.append(d[0])
-            s += np.float128(d[1])
-            self.wordsAbs.append(s)
-        self.wordsAbs = np.array(self.wordsAbs)/s
+        for word in dico:
+            self.wordsSpell.append(word[0])
+            cumulativeFreq += np.float128(word[2])
+            self.wordsAbs.append(cumulativeFreq)
+        self.wordsAbs = np.array(self.wordsAbs) / cumulativeFreq
         print(self.wordsAbs)
 
         file.close()
 
+        #tmpF = open("outputDico.txt", "w")
+        #for w in dico: tmpF.write(w[0] + "\n")
+        #tmpF.close()
+
         #print(self.wordsAbs)
         #self.restart()
-        #self.wordsAbs = list(map(lambda x: float(x)/float(s),self.wordsAbs))
+        #self.wordsAbs = list(map(lambda x: float(x)/float(cumulativeFreq),self.wordsAbs))
 
     # Used in order to efficiently find which word corresponds to 
     # the current search interval
@@ -73,8 +78,8 @@ class dicotomix:
             raise ValueError
         return i-1
 
-    # Gives the word corresponding to the current
-    # search interval: the closest word to the mid abcisse
+    # Gives a word corresponding to the current search interval:
+    # a word close to the mid abcisse to wich is added a small random bias
     def getWord(self):
         mid = self.curr[-1].mid()
         intervalLength = self.curr[-1].end - self.curr[-1].beg
@@ -94,6 +99,17 @@ class dicotomix:
     # Remove accents from a string
     def removeAccents(self, word):
         return unidecode.unidecode(word)
+
+    # Remove dashes and apostrophes from a string
+    def removeDash(self, word):
+        return re.sub(r"-|'", r"", word)
+
+    # Remove apostrophes at the end of a word
+    def removeApostropheEnd(self, word):
+        if word[-1] == "'":
+            return word[:-1]
+        else:
+            return word
 
     # Give the common prefix of bounds without accent
     def boundPrefix(self):
