@@ -76,7 +76,7 @@ class dicotomix:
 
     # Remove dashes and apostrophes from a string
     def removeDash(self, word):
-        return re.sub(r"[' .-]+", r"", word)
+        return re.sub(r"[' ,.-]+", r"", word)
 
     # Remove apostrophes at the end of a word
     def removeApostropheEnd(self, word):
