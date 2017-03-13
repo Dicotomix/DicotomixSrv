@@ -1,6 +1,6 @@
 import bisect
 import PyICU
-import struct 
+import struct
 import socket
 import numpy as np
 import unidecode
@@ -69,7 +69,7 @@ class dicotomix:
         #print(self.wordsAbs)
         #self.restart()
         #self.wordsAbs = list(map(lambda x: float(x)/float(cumulativeFreq),self.wordsAbs))
-   
+
     # Remove accents from a string
     def removeAccents(self, word):
         return unidecode.unidecode(word)
@@ -85,7 +85,7 @@ class dicotomix:
         else:
             return word
 
-    # Used in order to efficiently find which word corresponds to 
+    # Used in order to efficiently find which word corresponds to
     # the current search interval
     def findIndex(self, cursor):
         i = bisect.bisect_right(self.wordsAbs, cursor)
@@ -127,7 +127,7 @@ class dicotomix:
     def isFinished(self):
         i_word_beg = self.findIndex(self.curr[-1].beg)
         i_word_end = self.findIndex(self.curr[-1].end)
-        return i_word_end == i_word_beg
+        return i_word_end <= i_word_beg
 
     # Compute the interval length of word wrt its index
     def wordLength(self, index):
@@ -136,7 +136,7 @@ class dicotomix:
     # Does the left operation
     def goLeft(self):
         midIndex = self.currentWordIndex[-1]
-        correction = self.wordLength(midIndex) / 100 # to avoid the "Existence" problem
+        correction = self.wordLength(midIndex-1) / 100 # to avoid the "Existence" problem
         leftAbs = self.wordsAbs[midIndex] - correction
         self.curr.append(self.curr[-1].leftPart(leftAbs))
         myd.getWord()
@@ -165,29 +165,29 @@ class dicotomix:
 
     # Test the method on a given word
     # it gives back the number of steps
-    def testWord(self, w):
+    def testWord(self, targetWord):
         #print(self.curr)
         #print(self.getWord())
-        gets = self.getWord()
+        proposedWord = self.getWord()
 
-        if gets == w:
-            return (True,0)
+        if proposedWord == targetWord:
+            return (True, 0)
 
         if self.isFinished():
-            return (False,0)
+            return (False, 0)
 
-        to_cmp = [gets,w]
+        to_cmp = [proposedWord, targetWord]
 
         collator = PyICU.Collator.createInstance(PyICU.Locale('pl_PL.UTF-8'))
         to_cmp.sort(key=collator.getSortKey)
 
-        if w == to_cmp[0]:
+        if targetWord == to_cmp[0]:
             self.goLeft()
         else:
             self.goRight()
 
-        res = self.testWord(w)
-        return (res[0],1+res[1])
+        res = self.testWord(targetWord)
+        return (res[0], 1+res[1])
 
     # gives back the mean number of trials over the whole dictionary
     # TODO: problem with finding the last word ([:-1] l.167)
@@ -218,7 +218,7 @@ def send(conn, w, prefix):
     print(myd.getWordsBound())
 
     #conn.send(bytes(dico[beg]+","+dico[get_mid()]+","+dico[end-1], 'utf-8'))
-    word = w.encode('utf-16be')
+    word = w.encode('utf8')
     conn.send(struct.pack(">I", len(word)))
     conn.send(word)
     conn.send(struct.pack(">I", prefix))
@@ -250,7 +250,7 @@ while 1:
         myd.goRight()
     if cmd[0] == 4:
         myd.discard()
-    
+
     send(conn,myd.wordsSpell[myd.currentWordIndex[-1]], myd.boundPrefix())
 
 conn.close()
