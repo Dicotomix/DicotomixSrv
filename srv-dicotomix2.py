@@ -127,7 +127,7 @@ class dicotomix:
     def isFinished(self):
         i_word_beg = self.findIndex(self.curr[-1].beg)
         i_word_end = self.findIndex(self.curr[-1].end)
-        return i_word_end == i_word_beg
+        return i_word_end <= i_word_beg
 
     # Compute the interval length of word wrt its index
     def wordLength(self, index):
@@ -136,7 +136,7 @@ class dicotomix:
     # Does the left operation
     def goLeft(self):
         midIndex = self.currentWordIndex[-1]
-        correction = self.wordLength(midIndex) / 100 # to avoid the "Existence" problem
+        correction = self.wordLength(midIndex-1) / 100 # to avoid the "Existence" problem
         leftAbs = self.wordsAbs[midIndex] - correction
         self.curr.append(self.curr[-1].leftPart(leftAbs))
         myd.getWord()
@@ -165,29 +165,29 @@ class dicotomix:
 
     # Test the method on a given word
     # it gives back the number of steps
-    def testWord(self, w):
+    def testWord(self, targetWord):
         #print(self.curr)
         #print(self.getWord())
-        gets = self.getWord()
+        proposedWord = self.getWord()
 
-        if gets == w:
-            return (True,0)
+        if proposedWord == targetWord:
+            return (True, 0)
 
         if self.isFinished():
-            return (False,0)
+            return (False, 0)
 
-        to_cmp = [gets,w]
+        to_cmp = [proposedWord, targetWord]
 
         collator = PyICU.Collator.createInstance(PyICU.Locale('pl_PL.UTF-8'))
         to_cmp.sort(key=collator.getSortKey)
 
-        if w == to_cmp[0]:
+        if targetWord == to_cmp[0]:
             self.goLeft()
         else:
             self.goRight()
 
-        res = self.testWord(w)
-        return (res[0],1+res[1])
+        res = self.testWord(targetWord)
+        return (res[0], 1+res[1])
 
     # gives back the mean number of trials over the whole dictionary
     # TODO: problem with finding the last word ([:-1] l.167)
