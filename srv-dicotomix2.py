@@ -1,6 +1,6 @@
 import bisect
 import PyICU
-import struct 
+import struct
 import socket
 import numpy as np
 import unidecode
@@ -69,7 +69,7 @@ class dicotomix:
         #print(self.wordsAbs)
         #self.restart()
         #self.wordsAbs = list(map(lambda x: float(x)/float(cumulativeFreq),self.wordsAbs))
-   
+
     # Remove accents from a string
     def removeAccents(self, word):
         return unidecode.unidecode(word)
@@ -85,7 +85,7 @@ class dicotomix:
         else:
             return word
 
-    # Used in order to efficiently find which word corresponds to 
+    # Used in order to efficiently find which word corresponds to
     # the current search interval
     def findIndex(self, cursor):
         i = bisect.bisect_right(self.wordsAbs, cursor)
@@ -218,7 +218,7 @@ def send(conn, w, prefix):
     print(myd.getWordsBound())
 
     #conn.send(bytes(dico[beg]+","+dico[get_mid()]+","+dico[end-1], 'utf-8'))
-    word = w.encode('utf-16be')
+    word = w.encode('utf8')
     conn.send(struct.pack(">I", len(word)))
     conn.send(word)
     conn.send(struct.pack(">I", prefix))
@@ -250,7 +250,7 @@ while 1:
         myd.goRight()
     if cmd[0] == 4:
         myd.discard()
-    
+
     send(conn,myd.wordsSpell[myd.currentWordIndex[-1]], myd.boundPrefix())
 
 conn.close()
