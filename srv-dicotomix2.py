@@ -6,6 +6,7 @@ import numpy as np
 import unidecode
 import random
 import re
+import pickle
 
 from interval import *
 
@@ -166,9 +167,12 @@ class dicotomix:
     # Test the method on a given word
     # it gives back the number of steps
     def testWord(self, targetWord):
-        #print(self.curr)
-        #print(self.getWord())
+#        print(self.curr)
+#        print(self.getWord())
         proposedWord = self.getWord()
+
+        targetWord = self.removeDash(targetWord)
+        proposedWord = self.removeDash(proposedWord)
 
         if proposedWord == targetWord:
             return (True, 0)
@@ -192,16 +196,26 @@ class dicotomix:
     # gives back the mean number of trials over the whole dictionary
     # TODO: problem with finding the last word ([:-1] l.167)
     def testAll(self):
+        d = {}
         m = 0
         self.restart()
+        count = 0
         for w in self.wordsSpell[:-1]:
-            print(w)
             res = self.testWord(w)
+            if res[1] not in d:
+                d[res[1]] = []
+
+
+            d[res[1]].append(w)
             self.restart()
             if not res[0]:
                 print("Error occurs with word: "+w)
                 return
             m += res[1]
+            count += 1
+
+        print("pickle")
+        pickle.dump(d, open("deep2word", "wb"))
         return float(m)/len(self.wordsSpell)
 
 
