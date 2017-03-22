@@ -234,11 +234,10 @@ myd.getWord()
 
 # Communication routine
 def send(conn, w, prefix):
-    print("Sent data: "+w+", "+str(prefix))
+    print("Sent data: "+';'.join(w)+", "+str(prefix))
     print(myd.getWordsBound())
 
-    #conn.send(bytes(dico[beg]+","+dico[get_mid()]+","+dico[end-1], 'utf-8'))
-    word = w.encode('utf8')
+    word = '\n'.join(w).encode('utf8')
     conn.send(struct.pack(">I", len(word)))
     conn.send(word)
     conn.send(struct.pack(">I", prefix))
@@ -272,6 +271,6 @@ while 1:
         myd.discard()
 
     # send myd.similarWords (which is a list of strings)
-    send(conn, myd.similarWords[myd.currentWordIndex[-1]][0], myd.boundPrefix())
+    send(conn, myd.similarWords[myd.currentWordIndex[-1]], myd.boundPrefix())
 
 conn.close()
