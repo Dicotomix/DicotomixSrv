@@ -13,7 +13,8 @@ from interval import *
 class dicotomix:
 
     # wordsAbs contains the (right) abscissa of words.
-    # wordsSpell stores the spelling of words.
+    # wordsSpell stores the simplest spelling of words.
+    # similarWords stores all the possible spellings of words (ex : [l,l'])
     # curr is the stack of visited intervals
     # the current state in self.curr[-1]
     # currentWordIndex is the stack of visited words
@@ -24,6 +25,7 @@ class dicotomix:
         self.cumulativeFreq = 0
         self.wordsAbs = []
         self.wordsSpell = []
+        self.similarWords = []
         self.epsilon = 1 / 50 # randomized interval length
         #self.init_words2(dict_name,freq)
 
@@ -35,19 +37,22 @@ class dicotomix:
         lines = file.read()
         lines = list(filter(lambda x: x != '', lines.split("\n")))
         frequencies = {}
+        sameLetters = {}
         for line in lines[1:]:
             parameters = list(filter(lambda x: x!='', line.split(";")))
 
-            word = self.removeApostropheEnd(parameters[0])
+            word = self.removeDash(self.removeAccents(parameters[0]))
             freq = np.float128(parameters[-1])
             if not word in frequencies:
                 frequencies[word] = freq
+                sameLetters[word] = [parameters[0]]
             else:
                 frequencies[word] += freq
+                sameLetters[word] += [parameters[0]]
 
         dico = []
         for word in frequencies:
-            dico.append((word, self.removeDash(word), frequencies[word]))
+            dico.append((sameLetters[word], word, frequencies[word]))
 
         collator = PyICU.Collator.createInstance(PyICU.Locale('fr_FR.UTF-8'))
         dico.sort(key = lambda x: collator.getSortKey(x[1]))
@@ -55,7 +60,8 @@ class dicotomix:
         cumulativeFreq = np.float128(0.0)
         self.wordsAbs.append(0.0)
         for word in dico:
-            self.wordsSpell.append(word[0])
+            self.wordsSpell.append(word[1])
+            self.similarWords.append(word[0])
             cumulativeFreq += np.float128(word[2])
             self.wordsAbs.append(cumulativeFreq)
         self.wordsAbs = np.array(self.wordsAbs) / cumulativeFreq
@@ -77,7 +83,7 @@ class dicotomix:
 
     # Remove dashes and apostrophes from a string
     def removeDash(self, word):
-        return re.sub(r"[' .-]+", r"", word)
+        return re.sub(r"[' ,.-]+", r"", word)
 
     # Remove apostrophes at the end of a word
     def removeApostropheEnd(self, word):
@@ -228,11 +234,10 @@ myd.getWord()
 
 # Communication routine
 def send(conn, w, prefix):
-    print("Sent data: "+w+", "+str(prefix))
+    print("Sent data: "+';'.join(w)+", "+str(prefix))
     print(myd.getWordsBound())
 
-    #conn.send(bytes(dico[beg]+","+dico[get_mid()]+","+dico[end-1], 'utf-8'))
-    word = w.encode('utf8')
+    word = '\n'.join(w).encode('utf8')
     conn.send(struct.pack(">I", len(word)))
     conn.send(word)
     conn.send(struct.pack(">I", prefix))
@@ -265,6 +270,7 @@ while 1:
     if cmd[0] == 4:
         myd.discard()
 
-    send(conn,myd.wordsSpell[myd.currentWordIndex[-1]], myd.boundPrefix())
+    # send myd.similarWords (which is a list of strings)
+    send(conn, myd.similarWords[myd.currentWordIndex[-1]], myd.boundPrefix())
 
 conn.close()
